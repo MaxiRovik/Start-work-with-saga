@@ -1,4 +1,4 @@
-import { takeEvery, put, call, fork } from 'redux-saga/effects';
+import { takeEvery, put, call, spawn, join} from 'redux-saga/effects';
 
 async function swapiGet(query) {
     const request = await fetch(`https://www.swapi.tech/api/${query}`);
@@ -17,6 +17,8 @@ async function swapiGet(query) {
 export function* loadPeople() {
     const people = yield call(swapiGet, 'people');
     yield put({type: 'SET_PEOPLE', payload: people.results});
+
+    return people;
 }
 
 export function* loadPlanets() {
@@ -24,17 +26,19 @@ export function* loadPlanets() {
     yield put({type: 'SET_PLANETS', payload: planets.results});
 }
 export function* workerSaga() {
-    yield fork(loadPeople);
-    yield fork(loadPlanets)
+    const task = yield spawn(loadPeople);
+    yield spawn(loadPlanets);
+    const people = yield join(task);
+    console.log('finish parallel tasks', people)
 }
 
-export function* watchClickSaga() {
+export function* watchLoadDataSaga() {
 yield takeEvery('LOAD_DATA', workerSaga);
 
 
 }
 
 export default function* rootSaga() {
-    yield watchClickSaga()
+    yield watchLoadDataSaga()
 
 }
